@@ -295,7 +295,7 @@ async function experimentInit() {
   consent_2 = new visual.TextStim({
     win: psychoJS.window,
     name: 'consent_2',
-    text: 'risks are expected to be brief and manageable, and you may take breaks or withdraw from the study at any time if needed.\n\nYour responses will be kept confidential, and only the research team will have access to your data. Identifiable information, such as your name and email, will be collected solely to grant course credit. This information will be securely stored on encrypted servers and deleted once course credit has been awarded. Afterward, your responses will be linked only to a unique participant ID to maintain confidentiality. Once your data has been de-identified, it will no longer be possible to withdraw it, as it will no longer be linked to your personal information. \n\nAll de-identified data will be securely stored for 10 years on encrypted servers accessible only to the research team. This data will be used for analysis to investigate the relationships between different cognitive abilities, and findings may be presented in reports or publications, but no identifying information will be shared. These procedures ensure your privacy and the security of your data throughout the study. This study has been reviewed and approved by the University of California, Riverside Institutional Review Board. \n\nIf you choose to participate, here’s what you can expect: You will first review an informed consent form online, which will explain the study in more detail and confirm your understanding and agreement to participate. After consenting, you will complete a short demographic survey, which will take about 5 minutes. You can skip any questions you do not want to answer. Location: Online, in a setting of your choice with internet access.\n\nYou will complete a series of cognitive tasks designed to measure abilities like memory, attention, and problem-solving. This 30 minute session will include 2 tasks covering a broader range of memory, reasoning abilities, and judgement. Location: Online, in one continuous session after the consent and survey. Credit: You will receive 1.0 research credit for your participation.\n\nAfter completing the cognitive tasks, you will receive a debriefing statement that explains the purpose of the study and the potential contributions of your participation to research. This will take about 5 minutes, and you can ask any questions you may have at this time.\nLocation: Online, immediately after the task session.\n',
+    text: 'risks are expected to be brief and manageable, and you may take breaks or withdraw from the study at any time if needed.\n\nYour responses will be kept confidential, and only the research team will have access to your data. Identifiable information, such as your name and email, will be collected solely to grant course credit. This information will be securely stored on encrypted servers and deleted once course credit has been awarded. Afterward, your responses will be linked only to a unique participant ID to maintain confidentiality. Once your data has been de-identified, it will no longer be possible to withdraw it, as it will no longer be linked to your personal information. \n\nAll de-identified data will be securely stored for 10 years on encrypted servers accessible only to the research team. This data will be used for analysis to investigate the relationships between different cognitive abilities, and findings may be presented in reports or publications, but no identifying information will be shared. These procedures ensure your privacy and the security of your data throughout the study. This study has been reviewed and approved by the University of California, Riverside Institutional Review Board. \n\nIf you choose to participate, here’s what you can expect: You will first review an informed consent form online, which will explain the study in more detail and confirm your understanding and agreement to participate. After consenting, you will complete a short demographic survey, which will take about 5 minutes. You can skip any questions you do not want to answer. Location: Online, in a setting of your choice with internet access.\n\nYou will complete a series of cognitive tasks designed to measure abilities like memory, attention, and problem-solving. This 30 minute session will include 2 tasks covering a broader range of memory, reasoning abilities, and judgement. Location: Online, in one continuous session after the consent and survey. Credit: You will receive 0.5 research credit for your participation.\n\nAfter completing the cognitive tasks, you will receive a debriefing statement that explains the purpose of the study and the potential contributions of your participation to research. This will take about 5 minutes, and you can ask any questions you may have at this time.\nLocation: Online, immediately after the task session.\n',
     font: 'Arial',
     units: undefined, 
     pos: [0, 0.05], draggable: false, height: 0.0225,  wrapWidth: undefined, ori: 0.0,
@@ -3669,43 +3669,38 @@ function thank_youRoutineBegin(snapshot) {
     routineTimer.reset();
     thank_youMaxDurationReached = false;
     // update component parameters for each repeat
-    // Keep this on the final routine (Begin Routine, JS)
-    psychoJS._saveResults = 0;  // fine to keep once upload works
+    // Disable downloading results to browser
+    psychoJS._saveResults = 0;
     
-    const filename = `${expInfo["Student ID #"] || "pilot"}_${Date.now()}.json`;
-    const dataJSON = JSON.stringify(psychoJS.experiment._trialsData);
+    //Generate filename for results
+    let filename = psychoJS.experiment._experimentName + '' + psychoJS._experiment._datetime + '.csv';
     
-    console.log("Saving data to DataPipe...", filename);
+    //Extract data object from experiment
+    let dataObj = psychoJS._experiment._trialsData;
     
-    fetch("https://pipe.jspsych.org/api/data/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "*/*",
-      },
-      body: JSON.stringify({
-        experimentID: "tIpbE4qOUAx6",
-        filename: filename,
-        data: dataJSON,
-      }),
+    //Convert data object to CSV
+    let data = [Object.keys(dataObj[0])].concat(dataObj).map(it => {
+        return Object.values(it).toString()
+    }).join('\n')
+    
+    // Send data to OSF via DataPipe
+    console.log('Saving data...');
+    fetch('https://pipe.jspsych.org/api/data', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: '/',
+        },
+        body: JSON.stringify({
+            experimentID: 'tIpbE4qOUAx6',
+            filename: filename,
+            data: data,
+        }),
+    }).then(response => response.json()).then(data => {
+        // Log response and force experiment end
+        console.log(data);
+        quitPsychoJS();
     })
-      .then(async (response) => {
-        const result = await response.json();
-        console.log("DataPipe response:", result);
-    
-        if (!response.ok || result.message !== "Success") {
-          throw new Error(`${result.error || "UPLOAD_FAILED"}: ${result.message || "Unknown error"}`);
-        }
-    
-        return quitPsychoJS(
-          "Thank you for your participation, you may now leave the window",
-          true
-        );
-      })
-      .catch((err) => {
-        console.error("DataPipe upload failed:", err);
-        alert("Data upload failed: " + err.message);
-      });
     psychoJS.experiment.addData('thank_you.started', globalClock.getTime());
     thank_youMaxDuration = null
     // keep track of which components have finished
